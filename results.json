@@ -1,0 +1,38 @@
+{
+  "timestamp": "20250612_194554",
+  "system_prompt": "You are a helpful assistant",
+  "human_prompt": "what is 1+1?",
+  "tier": "economy",
+  "responses": {
+    "claude": {
+      "content": "1 + 1 = 2",
+      "usage": {
+        "input_tokens": 19,
+        "output_tokens": 13,
+        "total_tokens": 32
+      },
+      "model": "claude-3-5-haiku-20241022",
+      "provider": "claude"
+    },
+    "openai": {
+      "content": "1 + 1 equals 2.",
+      "usage": {
+        "input_tokens": 23,
+        "output_tokens": 8,
+        "total_tokens": 31
+      },
+      "model": "gpt-4o-mini",
+      "provider": "openai"
+    },
+    "gemini": {
+      "content": "1 + 1 = 2\n",
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 8,
+        "total_tokens": 20
+      },
+      "model": "gemini-1.5-flash",
+      "provider": "gemini"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "system_prompts": {
+    "default": "You are a helpful, harmless, and honest AI assistant.",
+    "coding": "You are an expert software developer. Provide clear, well-commented code with explanations. Focus on best practices, readability, and maintainability.",
+    "creative": "You are a creative writer. Write engaging, imaginative content with vivid descriptions. Use literary techniques and compelling narratives.",
+    "math": "You are a mathematics tutor. Explain concepts clearly with step-by-step solutions. Use examples and analogies to make complex topics understandable.",
+    "analysis": "You are a data analyst. Provide thorough analysis with insights and recommendations. Focus on patterns, trends, and actionable conclusions.",
+    "translator": "You are a professional translator. Provide accurate, natural translations while preserving the original meaning and tone.",
+    "teacher": "You are an educational instructor. Explain topics clearly with examples and analogies. Adapt your teaching style to the student's level.",
+    "business": "You are a business consultant. Provide strategic advice and actionable recommendations based on best practices and market insights.",
+    "researcher": "You are a research assistant. Provide well-sourced, comprehensive information. Be thorough, accurate, and cite relevant sources.",
+    "reviewer": "You are a content reviewer. Provide constructive feedback and suggestions for improvement. Be specific and actionable in your recommendations."
+  },
+  "default_settings": {
+    "provider": "claude",
+    "tier": "economy",
+    "max_tokens": 1024,
+    "temperature": 0.7,
+    "system_prompt": "default"
+  },
+  "tiers": {
+    "economy": {
+      "description": "Economy tier - cheapest models for cost-effective processing",
+      "claude": "claude-3-5-haiku-20241022",
+      "openai": "gpt-4o-mini",
+      "gemini": "gemini-1.5-flash",
+      "synthesis": "claude-3-5-haiku-20241022"
+    },
+    "mid": {
+      "description": "Mid tier - balanced cost and quality with premium synthesis",
+      "claude": "claude-3-5-haiku-20241022",
+      "openai": "gpt-4o-mini",
+      "gemini": "gemini-1.5-flash",
+      "synthesis": "claude-3-5-sonnet-20241022"
+    },
+    "luxury": {
+      "description": "Luxury tier - premium models for maximum quality",
+      "claude": "claude-3-5-sonnet-20241022",
+      "openai": "gpt-4",
+      "gemini": "gemini-1.5-pro",
+      "synthesis": "claude-3-5-sonnet-20241022"
+    }
+  },
+  "pricing": {
+    "claude-3-5-haiku-20241022": [0.25, 1.25],
+    "claude-3-5-sonnet-20241022": [3.00, 15.00],
+    "gpt-4o-mini": [0.15, 0.60],
+    "gpt-4": [30.00, 60.00],
+    "gemini-1.5-flash": [0.075, 0.30],
+    "gemini-1.5-pro": [1.25, 5.00]
+  },
+  "output_settings": {
+    "save_config_in_results": true,
+    "timestamp_results": true,
+    "include_metadata": true
+  }
+}
