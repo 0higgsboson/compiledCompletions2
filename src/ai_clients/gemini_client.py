@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+@author Sid Shaik (@0higgsboson) 
+Licensed under Apache 2.0
+
 Google Gemini API client for making requests to Google's Gemini API
 """
 

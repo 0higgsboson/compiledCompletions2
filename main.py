@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+@author Sid Shaik (@0higgsboson) 
+Licensed under Apache 2.0
+
 Simple AI prompt comparison tool
 Compares responses across Claude, OpenAI, and Gemini with tier-based model selection
 """

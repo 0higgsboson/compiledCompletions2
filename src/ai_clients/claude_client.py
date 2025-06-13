@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """
+@author Sid Shaik (@0higgsboson) 
+Licensed under Apache 2.0
+
 Claude API client for making requests to Anthropic's API
 """
 
