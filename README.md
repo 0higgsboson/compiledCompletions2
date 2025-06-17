@@ -72,6 +72,18 @@ python3 main.py "You are a helpful assistant" "Explain quantum computing" --tier
 python3 main.py "You are a helpful assistant" "Explain quantum computing" --tier luxury
 ```
 
+### Multiple Calls for Consistency Testing
+```bash
+# Make 5 calls to OpenAI to test response consistency
+python3 main.py "You are a helpful assistant" "Explain quantum computing" --provider openai --num-calls 5
+
+# Compare all providers with 3 calls each
+python3 main.py "You are a helpful assistant" "Explain quantum computing" --num-calls 3
+
+# Luxury tier with multiple calls for high-quality analysis
+python3 main.py "You are a helpful assistant" "Explain quantum computing" --tier luxury --num-calls 10
+```
+
 ### Save Results
 ```bash
 python3 main.py "You are a helpful assistant" "Explain quantum computing" --output results.json
@@ -117,6 +129,7 @@ python3 main.py "You are a helpful assistant" "Explain quantum computing" --outp
 ### Generation Parameters
 - `--max-tokens INT`: Maximum tokens per response (default: 1024)
 - `--temperature FLOAT`: Sampling temperature for OpenAI/Gemini (default: 0.7)
+- `--num-calls INT`: Number of calls to make to each model with the same prompt (default: 1)
 
 ### Output Options
 - `--output FILE`: Save results to JSON file
@@ -196,9 +209,17 @@ See `requirements.txt` for full dependencies. Main requirements:
 The tool includes comprehensive error handling for:
 - Missing API keys with helpful setup instructions
 - API authentication issues
-- Network errors
+- Network errors and timeouts
+- Rate limiting and server overload (with automatic retry)
 - Invalid parameters
 - Provider-specific errors
+
+### Automatic Retry Logic
+All providers now include intelligent retry logic for temporary failures:
+- **Exponential backoff**: 1s → 2s → 4s wait times
+- **Smart error detection**: Only retries on temporary errors (rate limits, server overload)
+- **User feedback**: Shows retry attempts in real-time
+- **Graceful fallback**: Returns error message if all retries fail
 
 ## Cost Tracking
 

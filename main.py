@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-@author Sid Shaik (@0higgsboson) 
+@author Sid Shaik (@0higgsboson)
 Licensed under Apache 2.0
 
 Simple AI prompt comparison tool
@@ -11,7 +11,11 @@ import argparse
 import sys
 import os
 import json
+import warnings
 from datetime import datetime
+
+# Suppress urllib3 OpenSSL warning on macOS
+warnings.filterwarnings("ignore", message="urllib3 v2 only supports OpenSSL 1.1.1+.*")
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -107,7 +111,7 @@ Synthesize these into one comprehensive response that captures the best elements
     
     return synthesis_response
 
-def compare_providers(system_prompt, human_prompt, tier="economy", max_tokens=1024, temperature=0.7):
+def compare_providers(system_prompt, human_prompt, tier="economy", max_tokens=1024, temperature=0.7, num_calls=1):
     """Compare responses across all three providers"""
     
     tier_config = TIERS[tier]
@@ -120,26 +124,56 @@ def compare_providers(system_prompt, human_prompt, tier="economy", max_tokens=10
     print(f"\n❓ HUMAN PROMPT:")
     print(f"{human_prompt}")
     print(f"\n🏷️ TIER: {tier.upper()} - {tier_config['description']}")
-    
+    if num_calls > 1:
+        print(f"🔄 CALLS PER MODEL: {num_calls}")
+
     # Call each provider
     providers = [
         ("claude", "🤖 CLAUDE", call_claude_with_prompts, tier_config["claude"]),
-        ("openai", "🧠 OPENAI", call_openai_with_prompts, tier_config["openai"]), 
+        ("openai", "🧠 OPENAI", call_openai_with_prompts, tier_config["openai"]),
         ("gemini", "💎 GEMINI", call_gemini_with_prompts, tier_config["gemini"])
     ]
-    
+
     for provider_key, provider_name, call_func, model in providers:
-        print(f"\nCalling {provider_name} with {model}...")
-        
-        if provider_key == "openai":
-            response = call_func(system_prompt, human_prompt, model=model, max_tokens=max_tokens, temperature=temperature)
-        elif provider_key == "gemini":
-            response = call_func(system_prompt, human_prompt, model=model, max_tokens=max_tokens, temperature=temperature)
-        else:  # claude
-            response = call_func(system_prompt, human_prompt, model=model, max_tokens=max_tokens)
-            
-        responses[provider_key] = response
-        print(format_response(response, provider_name, provider_name.split()[0]))
+        print(f"\nCalling {provider_name} with {model} ({num_calls} time{'s' if num_calls != 1 else ''})...")
+
+        provider_responses = []
+        total_usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+
+        for call_num in range(num_calls):
+            if num_calls > 1:
+                print(f"  Call {call_num + 1}/{num_calls}...")
+
+            if provider_key == "openai":
+                response = call_func(system_prompt, human_prompt, model=model, max_tokens=max_tokens, temperature=temperature)
+            elif provider_key == "gemini":
+                response = call_func(system_prompt, human_prompt, model=model, max_tokens=max_tokens, temperature=temperature)
+            else:  # claude
+                response = call_func(system_prompt, human_prompt, model=model, max_tokens=max_tokens)
+
+            provider_responses.append(response)
+
+            # Accumulate usage statistics
+            usage = response.get("usage", {})
+            total_usage["input_tokens"] += usage.get("input_tokens", 0)
+            total_usage["output_tokens"] += usage.get("output_tokens", 0)
+            total_usage["total_tokens"] += usage.get("total_tokens", 0)
+
+        # Store aggregated response data
+        if num_calls == 1:
+            # Single call - use the response as-is
+            responses[provider_key] = provider_responses[0]
+        else:
+            # Multiple calls - create aggregated response
+            all_contents = [resp.get("content", "") for resp in provider_responses]
+            responses[provider_key] = {
+                "content": f"[{num_calls} calls made]\n" + "\n\n---\n\n".join(all_contents),
+                "model": model,
+                "usage": total_usage,
+                "individual_responses": provider_responses
+            }
+
+        print(format_response(responses[provider_key], provider_name, provider_name.split()[0]))
     
     return responses
 
@@ -195,14 +229,14 @@ def print_cost_summary(responses, synthesis_response=None):
 
 def main():
     parser = argparse.ArgumentParser(description="Compare AI responses across Claude, OpenAI, and Gemini")
-    parser.add_argument("system_prompt", help="System prompt to set AI behavior")
-    parser.add_argument("human_prompt", help="Human prompt/question")
+    parser.add_argument("system_prompt", nargs='?', help="System prompt to set AI behavior")
+    parser.add_argument("human_prompt", nargs='?', help="Human prompt/question")
     
     # Provider selection
     parser.add_argument("--provider", choices=["claude", "openai", "gemini"], 
                        help="Use single provider instead of comparison")
-    parser.add_argument("--compare", action="store_true", default=True,
-                       help="Compare all providers (default behavior)")
+    parser.add_argument("--compare", action="store_true",
+                       help="Compare all providers (default when no --provider specified)")
     parser.add_argument("--synthesize", action="store_true", 
                        help="Generate synthesized response combining all providers")
     
@@ -217,6 +251,8 @@ def main():
                        help="Maximum tokens per response (default: 1024)")
     parser.add_argument("--temperature", type=float, default=0.7,
                        help="Sampling temperature for OpenAI/Gemini (default: 0.7)")
+    parser.add_argument("--num-calls", type=int, default=1,
+                       help="Number of calls to make to each model with the same prompt (default: 1)")
     
     # Output options  
     parser.add_argument("--output", help="Save results to file")
@@ -238,53 +274,111 @@ def main():
             if tier_config.get('synthesis'):
                 print(f"   Synthesis: {tier_config['synthesis']}")
         return
-    
-    # Check API keys
-    if not args.provider or args.provider == "claude" or args.compare:
+
+    # Check that required prompts are provided
+    if not args.system_prompt or not args.human_prompt:
+        parser.error("system_prompt and human_prompt are required unless using --list-tiers")
+
+    # Determine mode: single provider if --provider is specified and --compare is not explicitly set
+    use_single_provider = args.provider and not args.compare
+
+    # Check API keys based on what we'll actually use
+    if use_single_provider:
+        # Single provider mode - only check the specified provider
+        if args.provider == "claude":
+            if not check_api_key():
+                sys.exit(1)
+        elif args.provider == "openai":
+            if not check_openai_api_key():
+                sys.exit(1)
+        elif args.provider == "gemini":
+            if not check_gemini_api_key():
+                sys.exit(1)
+    else:
+        # Multi-provider mode - check all providers
         if not check_api_key():
             sys.exit(1)
-    
-    if not args.provider or args.provider == "openai" or args.compare:
         if not check_openai_api_key():
             sys.exit(1)
-            
-    if not args.provider or args.provider == "gemini" or args.compare:
         if not check_gemini_api_key():
             sys.exit(1)
     
     # Single provider mode
-    if args.provider and not args.compare:
+    if use_single_provider:
         tier_config = TIERS[args.tier]
         model = tier_config[args.provider]
-        
+
         print(f"\n🎯 SINGLE PROVIDER: {args.provider.upper()}")
         print(f"Model: {model}")
         print(f"Tier: {args.tier}")
-        
-        if args.provider == "claude":
-            response = call_claude_with_prompts(args.system_prompt, args.human_prompt, 
-                                              model=model, max_tokens=args.max_tokens)
-        elif args.provider == "openai":
-            response = call_openai_with_prompts(args.system_prompt, args.human_prompt,
-                                              model=model, max_tokens=args.max_tokens, 
-                                              temperature=args.temperature)
-        elif args.provider == "gemini":
-            response = call_gemini_with_prompts(args.system_prompt, args.human_prompt,
-                                              model=model, max_tokens=args.max_tokens,
-                                              temperature=args.temperature)
-        
-        print(f"\n{response['content']}")
-        cost = calculate_cost(response["usage"], response["model"])
-        print(f"\n💰 Cost: ${cost:.6f}")
-        
+        if args.num_calls > 1:
+            print(f"🔄 Number of calls: {args.num_calls}")
+
+        responses = []
+        total_usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+        total_cost = 0
+
+        for call_num in range(args.num_calls):
+            if args.num_calls > 1:
+                print(f"\nCall {call_num + 1}/{args.num_calls}...")
+
+            if args.provider == "claude":
+                response = call_claude_with_prompts(args.system_prompt, args.human_prompt,
+                                                  model=model, max_tokens=args.max_tokens)
+            elif args.provider == "openai":
+                response = call_openai_with_prompts(args.system_prompt, args.human_prompt,
+                                                  model=model, max_tokens=args.max_tokens,
+                                                  temperature=args.temperature)
+            elif args.provider == "gemini":
+                response = call_gemini_with_prompts(args.system_prompt, args.human_prompt,
+                                                  model=model, max_tokens=args.max_tokens,
+                                                  temperature=args.temperature)
+
+            responses.append(response)
+
+            # Accumulate usage and cost
+            usage = response.get("usage", {})
+            total_usage["input_tokens"] += usage.get("input_tokens", 0)
+            total_usage["output_tokens"] += usage.get("output_tokens", 0)
+            total_usage["total_tokens"] += usage.get("total_tokens", 0)
+
+            call_cost = calculate_cost(usage, response["model"])
+            total_cost += call_cost
+
+            if args.num_calls > 1:
+                print(f"Response {call_num + 1}:")
+                print(f"{response['content']}")
+                print(f"Cost: ${call_cost:.6f}")
+                print("-" * 40)
+
+        if args.num_calls == 1:
+            print(f"\n{responses[0]['content']}")
+        else:
+            print(f"\n📊 SUMMARY OF {args.num_calls} CALLS:")
+            print(f"Total tokens used: {total_usage['total_tokens']}")
+            print(f"Average tokens per call: {total_usage['total_tokens'] / args.num_calls:.1f}")
+
+        print(f"\n💰 Total Cost: ${total_cost:.6f}")
+        if args.num_calls > 1:
+            print(f"💰 Average Cost per Call: ${total_cost / args.num_calls:.6f}")
+
         if args.json:
-            print(f"\n{json.dumps(response, indent=2)}")
-        
+            if args.num_calls == 1:
+                print(f"\n{json.dumps(responses[0], indent=2)}")
+            else:
+                output_data = {
+                    "num_calls": args.num_calls,
+                    "total_usage": total_usage,
+                    "total_cost": total_cost,
+                    "individual_responses": responses
+                }
+                print(f"\n{json.dumps(output_data, indent=2)}")
+
         return
     
     # Multi-provider comparison mode
-    responses = compare_providers(args.system_prompt, args.human_prompt, 
-                                args.tier, args.max_tokens, args.temperature)
+    responses = compare_providers(args.system_prompt, args.human_prompt,
+                                args.tier, args.max_tokens, args.temperature, args.num_calls)
     
     synthesis_response = None
     if args.synthesize:
@@ -310,15 +404,16 @@ def main():
             "system_prompt": args.system_prompt,
             "human_prompt": args.human_prompt,
             "tier": args.tier,
+            "num_calls": args.num_calls,
             "responses": responses
         }
-        
+
         if synthesis_response:
             output_data["synthesis"] = synthesis_response
-        
+
         with open(args.output, 'w') as f:
             json.dump(output_data, f, indent=2)
-        
+
         print(f"\n💾 Results saved to: {args.output}")
 
 if __name__ == "__main__":
