@@ -24,6 +24,8 @@
       "claude": "claude-3-5-haiku-20241022",
       "openai": "gpt-4o-mini",
       "gemini": "gemini-1.5-flash",
+      "perplexity": "llama-3.1-sonar-small-128k-online",
+      "searchgpt": "gpt-4o-mini",
       "synthesis": "claude-3-5-haiku-20241022"
     },
     "mid": {
@@ -31,6 +33,8 @@
       "claude": "claude-3-5-haiku-20241022",
       "openai": "gpt-4o-mini",
       "gemini": "gemini-1.5-flash",
+      "perplexity": "llama-3.1-sonar-large-128k-online",
+      "searchgpt": "gpt-4o",
       "synthesis": "claude-3-5-sonnet-20241022"
     },
     "luxury": {
@@ -38,6 +42,8 @@
       "claude": "claude-3-5-sonnet-20241022",
       "openai": "gpt-4",
       "gemini": "gemini-1.5-pro",
+      "perplexity": "llama-3.1-sonar-huge-128k-online",
+      "searchgpt": "gpt-4-turbo",
       "synthesis": "claude-3-5-sonnet-20241022"
     }
   },
@@ -45,9 +51,14 @@
     "claude-3-5-haiku-20241022": [0.25, 1.25],
     "claude-3-5-sonnet-20241022": [3.00, 15.00],
     "gpt-4o-mini": [0.15, 0.60],
+    "gpt-4o": [2.50, 10.00],
+    "gpt-4-turbo": [10.00, 30.00],
     "gpt-4": [30.00, 60.00],
     "gemini-1.5-flash": [0.075, 0.30],
-    "gemini-1.5-pro": [1.25, 5.00]
+    "gemini-1.5-pro": [1.25, 5.00],
+    "llama-3.1-sonar-small-128k-online": [0.20, 0.20],
+    "llama-3.1-sonar-large-128k-online": [1.00, 1.00],
+    "llama-3.1-sonar-huge-128k-online": [5.00, 5.00]
   },
   "output_settings": {
     "save_config_in_results": true,

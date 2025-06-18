@@ -23,6 +23,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.ai_clients.claude_client import call_claude_with_prompts, check_api_key
 from src.ai_clients.openai_client import call_openai_with_prompts, check_openai_api_key
 from src.ai_clients.gemini_client import call_gemini_with_prompts, check_gemini_api_key
+from src.ai_clients.perplexity_client import call_perplexity_with_prompts, check_perplexity_api_key
+from src.ai_clients.searchgpt_client import call_searchgpt_with_prompts, check_searchgpt_api_keys
 
 # Tier configuration
 TIERS = {
@@ -31,6 +33,8 @@ TIERS = {
         "claude": "claude-3-5-haiku-20241022",
         "openai": "gpt-4o-mini", 
         "gemini": "gemini-1.5-flash",
+        "perplexity": "llama-3.1-sonar-small-128k-online",
+        "searchgpt": "gpt-4o-mini",
         "synthesis": "claude-3-5-haiku-20241022"
     },
     "mid": {
@@ -38,6 +42,8 @@ TIERS = {
         "claude": "claude-3-5-haiku-20241022",
         "openai": "gpt-4o-mini",
         "gemini": "gemini-1.5-flash", 
+        "perplexity": "llama-3.1-sonar-large-128k-online",
+        "searchgpt": "gpt-4o",
         "synthesis": "claude-3-5-sonnet-20241022"
     },
     "luxury": {
@@ -45,6 +51,8 @@ TIERS = {
         "claude": "claude-3-5-sonnet-20241022",
         "openai": "gpt-4",
         "gemini": "gemini-1.5-pro",
+        "perplexity": "llama-3.1-sonar-huge-128k-online",
+        "searchgpt": "gpt-4-turbo",
         "synthesis": "claude-3-5-sonnet-20241022"
     }
 }
@@ -54,9 +62,14 @@ PRICING = {
     "claude-3-5-haiku-20241022": (0.25, 1.25),
     "claude-3-5-sonnet-20241022": (3.00, 15.00),
     "gpt-4o-mini": (0.15, 0.60),
+    "gpt-4o": (2.50, 10.00),
+    "gpt-4-turbo": (10.00, 30.00),
     "gpt-4": (30.00, 60.00),
     "gemini-1.5-flash": (0.075, 0.30),
-    "gemini-1.5-pro": (1.25, 5.00)
+    "gemini-1.5-pro": (1.25, 5.00),
+    "llama-3.1-sonar-small-128k-online": (0.20, 0.20),
+    "llama-3.1-sonar-large-128k-online": (1.00, 1.00),
+    "llama-3.1-sonar-huge-128k-online": (5.00, 5.00)
 }
 
 def calculate_cost(usage, model):
@@ -90,17 +103,19 @@ def format_response(response, provider_name, emoji):
 
 def synthesize_responses(responses, system_prompt, human_prompt, tier):
     """Create a synthesized response using all provider responses"""
-    synthesis_prompt = f"""Based on the following three AI responses to the same question, create a synthesized answer that combines the best insights from all three responses.
+    provider_responses = []
+    for provider, response in responses.items():
+        provider_responses.append(f"{provider.upper()} Response: {response['content']}")
+    
+    responses_text = "\n\n".join(provider_responses)
+    
+    synthesis_prompt = f"""Based on the following AI responses to the same question, create a synthesized answer that combines the best insights from all responses.
 
 Original Question: {human_prompt}
 
-Claude Response: {responses['claude']['content']}
+{responses_text}
 
-OpenAI Response: {responses['openai']['content']}
-
-Gemini Response: {responses['gemini']['content']}
-
-Synthesize these into one comprehensive response that captures the best elements from all three while maintaining coherence and eliminating redundancy."""
+Synthesize these into one comprehensive response that captures the best elements from all responses while maintaining coherence and eliminating redundancy."""
 
     model = TIERS[tier]["synthesis"]
     synthesis_response = call_claude_with_prompts(
@@ -111,8 +126,8 @@ Synthesize these into one comprehensive response that captures the best elements
     
     return synthesis_response
 
-def compare_providers(system_prompt, human_prompt, tier="economy", max_tokens=1024, temperature=0.7, num_calls=1):
-    """Compare responses across all three providers"""
+def compare_providers(system_prompt, human_prompt, tier="economy", max_tokens=1024, temperature=0.7, num_calls=1, realtime=False):
+    """Compare responses across providers (with optional real-time search)"""
     
     tier_config = TIERS[tier]
     responses = {}
@@ -127,12 +142,21 @@ def compare_providers(system_prompt, human_prompt, tier="economy", max_tokens=10
     if num_calls > 1:
         print(f"🔄 CALLS PER MODEL: {num_calls}")
 
-    # Call each provider
-    providers = [
-        ("claude", "🤖 CLAUDE", call_claude_with_prompts, tier_config["claude"]),
-        ("openai", "🧠 OPENAI", call_openai_with_prompts, tier_config["openai"]),
-        ("gemini", "💎 GEMINI", call_gemini_with_prompts, tier_config["gemini"])
-    ]
+    # Call each provider - select based on realtime flag
+    if realtime:
+        # Real-time mode: use Perplexity and SearchGPT for search capabilities
+        providers = [
+            ("perplexity", "🔍 PERPLEXITY", call_perplexity_with_prompts, tier_config["perplexity"]),
+            ("searchgpt", "🌐 SEARCHGPT", call_searchgpt_with_prompts, tier_config["searchgpt"])
+        ]
+        print(f"🔴 REAL-TIME MODE: Using Perplexity and SearchGPT for current information")
+    else:
+        # Standard mode: use Claude, OpenAI, and Gemini
+        providers = [
+            ("claude", "🤖 CLAUDE", call_claude_with_prompts, tier_config["claude"]),
+            ("openai", "🧠 OPENAI", call_openai_with_prompts, tier_config["openai"]),
+            ("gemini", "💎 GEMINI", call_gemini_with_prompts, tier_config["gemini"])
+        ]
 
     for provider_key, provider_name, call_func, model in providers:
         print(f"\nCalling {provider_name} with {model} ({num_calls} time{'s' if num_calls != 1 else ''})...")
@@ -147,6 +171,10 @@ def compare_providers(system_prompt, human_prompt, tier="economy", max_tokens=10
             if provider_key == "openai":
                 response = call_func(system_prompt, human_prompt, model=model, max_tokens=max_tokens, temperature=temperature)
             elif provider_key == "gemini":
+                response = call_func(system_prompt, human_prompt, model=model, max_tokens=max_tokens, temperature=temperature)
+            elif provider_key == "perplexity":
+                response = call_func(system_prompt, human_prompt, model=model, max_tokens=max_tokens, temperature=temperature)
+            elif provider_key == "searchgpt":
                 response = call_func(system_prompt, human_prompt, model=model, max_tokens=max_tokens, temperature=temperature)
             else:  # claude
                 response = call_func(system_prompt, human_prompt, model=model, max_tokens=max_tokens)
@@ -186,7 +214,7 @@ def print_cost_summary(responses, synthesis_response=None):
     total_cost = 0
     costs = []
     
-    provider_emojis = {"claude": "🤖", "openai": "🧠", "gemini": "💎"}
+    provider_emojis = {"claude": "🤖", "openai": "🧠", "gemini": "💎", "perplexity": "🔍", "searchgpt": "🌐"}
     
     for provider, response in responses.items():
         model = response.get("model", "unknown")
@@ -233,12 +261,14 @@ def main():
     parser.add_argument("human_prompt", nargs='?', help="Human prompt/question")
     
     # Provider selection
-    parser.add_argument("--provider", choices=["claude", "openai", "gemini"], 
+    parser.add_argument("--provider", choices=["claude", "openai", "gemini", "perplexity", "searchgpt"], 
                        help="Use single provider instead of comparison")
     parser.add_argument("--compare", action="store_true",
                        help="Compare all providers (default when no --provider specified)")
     parser.add_argument("--synthesize", action="store_true", 
                        help="Generate synthesized response combining all providers")
+    parser.add_argument("--realtime", action="store_true", 
+                       help="Enable real-time mode using Perplexity and SearchGPT (default: disabled)")
     
     # Tier selection
     parser.add_argument("--tier", choices=["economy", "mid", "luxury"], default="economy",
@@ -271,6 +301,8 @@ def main():
             print(f"   Claude: {tier_config['claude']}")
             print(f"   OpenAI: {tier_config['openai']}")
             print(f"   Gemini: {tier_config['gemini']}")
+            print(f"   Perplexity: {tier_config['perplexity']}")
+            print(f"   SearchGPT: {tier_config['searchgpt']}")
             if tier_config.get('synthesis'):
                 print(f"   Synthesis: {tier_config['synthesis']}")
         return
@@ -294,14 +326,28 @@ def main():
         elif args.provider == "gemini":
             if not check_gemini_api_key():
                 sys.exit(1)
+        elif args.provider == "perplexity":
+            if not check_perplexity_api_key():
+                sys.exit(1)
+        elif args.provider == "searchgpt":
+            if not check_searchgpt_api_keys():
+                sys.exit(1)
     else:
-        # Multi-provider mode - check all providers
-        if not check_api_key():
-            sys.exit(1)
-        if not check_openai_api_key():
-            sys.exit(1)
-        if not check_gemini_api_key():
-            sys.exit(1)
+        # Multi-provider mode - check providers based on realtime flag
+        if args.realtime:
+            # Real-time mode: only check Perplexity and SearchGPT
+            if not check_perplexity_api_key():
+                sys.exit(1)
+            if not check_searchgpt_api_keys():
+                sys.exit(1)
+        else:
+            # Standard mode: check Claude, OpenAI, and Gemini
+            if not check_api_key():
+                sys.exit(1)
+            if not check_openai_api_key():
+                sys.exit(1)
+            if not check_gemini_api_key():
+                sys.exit(1)
     
     # Single provider mode
     if use_single_provider:
@@ -333,6 +379,14 @@ def main():
                 response = call_gemini_with_prompts(args.system_prompt, args.human_prompt,
                                                   model=model, max_tokens=args.max_tokens,
                                                   temperature=args.temperature)
+            elif args.provider == "perplexity":
+                response = call_perplexity_with_prompts(args.system_prompt, args.human_prompt,
+                                                      model=model, max_tokens=args.max_tokens,
+                                                      temperature=args.temperature)
+            elif args.provider == "searchgpt":
+                response = call_searchgpt_with_prompts(args.system_prompt, args.human_prompt,
+                                                     model=model, max_tokens=args.max_tokens,
+                                                     temperature=args.temperature)
 
             responses.append(response)
 
@@ -378,7 +432,7 @@ def main():
     
     # Multi-provider comparison mode
     responses = compare_providers(args.system_prompt, args.human_prompt,
-                                args.tier, args.max_tokens, args.temperature, args.num_calls)
+                                args.tier, args.max_tokens, args.temperature, args.num_calls, args.realtime)
     
     synthesis_response = None
     if args.synthesize:
