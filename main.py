@@ -57,19 +57,19 @@ TIERS = {
     }
 }
 
-# Pricing per 1K tokens (input/output)
+# Pricing per 1K tokens (input/output) - converted from provider per-million rates
 PRICING = {
-    "claude-3-5-haiku-20241022": (0.25, 1.25),
-    "claude-3-5-sonnet-20241022": (3.00, 15.00),
-    "gpt-4o-mini": (0.15, 0.60),
-    "gpt-4o": (2.50, 10.00),
-    "gpt-4-turbo": (10.00, 30.00),
-    "gpt-4": (30.00, 60.00),
-    "gemini-1.5-flash": (0.075, 0.30),
-    "gemini-1.5-pro": (1.25, 5.00),
-    "llama-3.1-sonar-small-128k-online": (0.20, 0.20),
-    "llama-3.1-sonar-large-128k-online": (1.00, 1.00),
-    "llama-3.1-sonar-huge-128k-online": (5.00, 5.00)
+    "claude-3-5-haiku-20241022": (0.0008, 0.004),
+    "claude-3-5-sonnet-20241022": (0.003, 0.015),
+    "gpt-4o-mini": (0.00015, 0.0006),
+    "gpt-4o": (0.0025, 0.01),
+    "gpt-4-turbo": (0.01, 0.03),
+    "gpt-4": (0.03, 0.06),
+    "gemini-1.5-flash": (0.000075, 0.0003),
+    "gemini-1.5-pro": (0.00125, 0.005),
+    "llama-3.1-sonar-small-128k-online": (0.0002, 0.0002),
+    "llama-3.1-sonar-large-128k-online": (0.001, 0.001),
+    "llama-3.1-sonar-huge-128k-online": (0.005, 0.005)
 }
 
 def calculate_cost(usage, model):

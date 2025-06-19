@@ -115,7 +115,7 @@ python3 main.py "You are a helpful assistant" "Explain quantum computing" --outp
 
 ### 🟢 Economy (Default)
 **Maximum cost savings** - Uses cheapest models
-- Claude: Haiku ($0.25/$1.25 per 1M tokens)
+- Claude: Haiku ($0.80/$4.00 per 1M tokens)
 - OpenAI: GPT-4o-mini ($0.15/$0.60 per 1M tokens)
 - Gemini: Flash ($0.075/$0.30 per 1M tokens)
 - Perplexity: Llama 3.1 Sonar Small ($0.20/$0.20 per 1M tokens)
@@ -126,7 +126,7 @@ python3 main.py "You are a helpful assistant" "Explain quantum computing" --outp
 **Balanced approach** - Cheap individual responses, premium synthesis
 - Individual responses: Same as Economy
 - Perplexity: Llama 3.1 Sonar Large ($1.00/$1.00 per 1M tokens)
-- SearchGPT: GPT-4o with web search ($2.50/$10.00 per 1M tokens)
+- SearchGPT: GPT-4o with web search ($3.00/$15.00 per 1M tokens)
 - Synthesis: Claude Sonnet (premium)
 - **Est. cost per comparison: ~$0.001-0.005**
 
@@ -261,6 +261,8 @@ The tool provides detailed cost analysis:
 - Efficiency rankings
 - Total cost breakdown
 - Real-time cost estimation
+
+**Note**: Pricing data has been updated to reflect accurate per-1K token rates based on current provider pricing (converted from per-million token rates).
 
 Perfect for budget-conscious AI experimentation and finding the most cost-effective provider for your use case.
 
